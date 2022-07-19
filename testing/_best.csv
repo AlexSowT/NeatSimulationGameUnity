@@ -1,0 +1,9 @@
+digraph Gen1 {
+node[width=1, shape=circle];
+"Bias0"[style=filled, fillcolor=white]
+"Input1"[style=filled, fillcolor=yellow]
+"Input2"[style=filled, fillcolor=yellow]
+"Output3"[style=filled, fillcolor=red]
+"Output4"[style=filled, fillcolor=red]
+"Bias0" -> "Output3" [label="-2.944"] [color=blue]
+}

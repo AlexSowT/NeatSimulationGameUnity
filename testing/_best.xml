@@ -1,0 +1,19 @@
+<Root>
+  <ActivationFunctions>
+    <Fn id="0" name="LogisticFunctionSteep" prob="1" />
+  </ActivationFunctions>
+  <Networks>
+    <Network id="0" birthGen="0" fitness="0">
+      <Nodes>
+        <Node type="bias" id="0" />
+        <Node type="in" id="1" />
+        <Node type="in" id="2" />
+        <Node type="out" id="3" />
+        <Node type="out" id="4" />
+      </Nodes>
+      <Connections>
+        <Con id="5" src="0" tgt="3" wght="-2.9436910956299958" />
+      </Connections>
+    </Network>
+  </Networks>
+</Root>
