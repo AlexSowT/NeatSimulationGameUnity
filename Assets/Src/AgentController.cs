@@ -67,5 +67,6 @@ public class AgentController : UnitController
     {
         base.FixedUpdate();
         this.spriteRenderer.color = UnitColor;
+        gameObject.SetActive(this.enabled);
     }
 }

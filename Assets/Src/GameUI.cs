@@ -26,6 +26,7 @@ public class GameUI : MonoBehaviour
         }
         if (GUI.Button(new Rect(xPos + 20f, 80, 110, 40), "Save Experiment"))
         {
+            _neatSupervisor.SaveExperiment();
         }
         if (GUI.Button(new Rect(xPos + 20f, 125, 110, 40), "Load Experiment"))
         {

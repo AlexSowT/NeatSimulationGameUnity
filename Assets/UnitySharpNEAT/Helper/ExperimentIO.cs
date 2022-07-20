@@ -67,7 +67,7 @@ namespace UnitySharpNEAT
         {
             return WriteGenomes(experiment, new NeatGenome[] { bestGenome }, ExperimentFileType.Champion);
         }
-
+        
         /// <summary>
         /// Writes a list of genomes to the save file fitting the experiment name and the ExperimentFileType.
         /// </summary>

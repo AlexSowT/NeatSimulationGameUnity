@@ -18,6 +18,7 @@ using SharpNeat.SpeciationStrategies;
 using System;
 using System.Collections.Generic;
 using System.Xml;
+using System.Xml.Serialization;
 using UnityEngine;
 
 
@@ -27,7 +28,7 @@ namespace UnitySharpNEAT
     /// The Experiment is what creates the evolution algorithm, which will evolve the Units using NEAT.
     /// It is also responsible for loading/saving the current population under the Experiment's 'Name' identifier.
     /// </summary>
-    [Serializable]
+    [XmlType("Config")]
     public class Experiment : INeatExperiment
     {
         #region MEMBER VARIABLES
@@ -37,7 +38,7 @@ namespace UnitySharpNEAT
         [SerializeField]
         private NeatGenomeParameters _neatGenomeParams;
 
-        [SerializeField]
+        [XmlElement(ElementName = "ExperimentName")]
         private string _name;
 
         [SerializeField]
@@ -69,39 +70,65 @@ namespace UnitySharpNEAT
         #endregion
 
         #region PROPERTIES
+        
+        [XmlElement(ElementName = "ExperimentName")]
         public string Name
         {
             get { return _name; }
+            set { _name = value; }
         }
 
         public string Description
         {
             get { return _description; }
+            set { _description = value; }
         }
 
         public int InputCount
         {
             get { return _inputCount; }
+            set { _inputCount = value; }
         }
 
         public int OutputCount
         {
             get { return _outputCount; }
+            set { _outputCount = value; }
         }
 
+        [XmlElement(ElementName = "PopulationSize")]
         public int DefaultPopulationSize
         {
             get { return _populationSize; }
+            set { _populationSize = value; }
+        }
+        
+        public int SpecieCount
+        {
+            get { return _specieCount; }
+            set { _specieCount = value; }
+        }
+        
+        public string ComplexityRegulationStrategy{
+            get { return _complexityRegulationStr; }
+            set { _complexityRegulationStr = value; }
+        }
+        
+        public int? ComplexityThreshold{
+            get { return _complexityThreshold; }
+            set { _complexityThreshold = value; }
         }
 
         public NeatEvolutionAlgorithmParameters NeatEvolutionAlgorithmParameters
         {
             get { return _eaParams; }
+            //set { _eaParams = value; }
         }
 
         public NeatGenomeParameters NeatGenomeParameters
         {
             get { return _neatGenomeParams; }
+            //set { _neatGenomeParams = value; }
         }
         #endregion
 

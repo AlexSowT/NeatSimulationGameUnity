@@ -15,8 +15,11 @@ using System;
 using System.Xml;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Xml.Serialization;
 using AnotherFileBrowser.Windows;
 using SharpNeat.Core;
+using Src;
 
 namespace UnitySharpNEAT
 {
@@ -38,7 +41,6 @@ namespace UnitySharpNEAT
 
         [SerializeField]
         private int _networkOutputCount = 2;
-
 
         [Header("Evaluation Settings")]
 
@@ -67,8 +69,7 @@ namespace UnitySharpNEAT
 
         [SerializeField]
         private bool _enableDebugLogging = false;
-
-
+        
         // Object pooling and Unit management
         private Dictionary<IBlackBox, UnitController> _blackBoxMap = new Dictionary<IBlackBox, UnitController>();
 
@@ -101,6 +102,8 @@ namespace UnitySharpNEAT
         }
 
         public Experiment Experiment { get; private set; }
+        
+        private FileManager FileManager { get; set; }
         #endregion
 
         #region UNTIY FUNCTIONS
@@ -124,6 +127,8 @@ namespace UnitySharpNEAT
             Experiment.Initialize(xmlConfig.DocumentElement, this, _networkInputCount, _networkOutputCount);
 
             ExperimentIO.DebugPrintSavePaths(Experiment);
+
+            this.FileManager = new FileManager();
         }
         #endregion
 
@@ -264,11 +269,13 @@ namespace UnitySharpNEAT
         {
             if (markUsed)
             {
+                controller.gameObject.SetActive(true);
                 _unusedUnitsPool.Remove(controller);
                 _usedUnitsPool.Add(controller);
             }
             else
             {
+                controller.gameObject.SetActive(false);
                 _unusedUnitsPool.Add(controller);
                 _usedUnitsPool.Remove(controller);
             }
@@ -316,43 +323,42 @@ namespace UnitySharpNEAT
         }
         #endregion
         
-        #region FILE MANAGEMENT
         
-        private XmlDocument OpenFileBrowserForLoad()
-        {
-            BrowserProperties browserProps = new BrowserProperties();
-            browserProps.filter = "Config Files (*.xml)|*.xml";
-            browserProps.filterIndex = 0;
-            browserProps.initialDir = @"C:\Development\University\NeatGame\NeatSimulation Game\Assets"; // TODO: Once I build this is this path still valid? TODO:: This will cause a bug when running anywhere other than my computer.
-            
-            XmlDocument xmlConfig = new XmlDocument();
-
-            new FileBrowser().OpenFileBrowser(browserProps, path  =>
-            {
-                // TODO: THere is an error here if the user doesnt select a file.
-                xmlConfig = new XmlDocument();
-
-                xmlConfig.Load(path);
-            });
-            
-            return xmlConfig;
-        }
-        
-        #endregion
 
         #region EXPERIMENT MANAGEMENT
 
         public void LoadExperiment()
         {
+            _usedUnitsPool.Clear();
+            
             Utility.DebugLog = _enableDebugLogging;
 
             // load experiment config file and use it to create an Experiment
-            XmlDocument xmlConfig = OpenFileBrowserForLoad();
+            XmlDocument xmlConfig = this.FileManager.OpenFileBrowserForLoad();
 
             Experiment = new Experiment();
             Experiment.Initialize(xmlConfig.DocumentElement, this, _networkInputCount, _networkOutputCount);
 
             ExperimentIO.DebugPrintSavePaths(Experiment);
+        }
+        
+        public void SaveExperiment()
+        {
+            // Save the population and best network to unity data location
+            Experiment.SavePopulation(EvolutionAlgorithm.GenomeList);
+            Experiment.SaveChampion(EvolutionAlgorithm.CurrentChampGenome);
+
+            // Serialize the experiment to a xml file.
+            string path = FileManager.OpenFileBrowserForSave();
+            
+            using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate))
+            {
+                using (XmlWriter xmlWriter = new XmlTextWriter(fs, Encoding.Unicode))
+                {
+                    XmlSerializer xmlSerializer = new XmlSerializer(Experiment.GetType());
+                    xmlSerializer.Serialize(xmlWriter, Experiment);
+                }
+            }
         }
         
         #endregion

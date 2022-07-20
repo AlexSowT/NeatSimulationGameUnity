@@ -33,6 +33,26 @@ namespace AnotherFileBrowser.Windows
                 filepath(ofd.FileName);
             }
         }
+        
+        /// <summary>
+        /// FileDialog for picking a single file
+        /// </summary>
+        /// <param name="browserProperties">Special Properties of File Dialog</param>
+        /// <param name="filepath">User picked path (Callback)</param>
+        public void SaveFileBrowser(BrowserProperties browserProperties, Action<string> filepath)
+        {
+            var ofd = new VistaSaveFileDialog();
+            ofd.Title = browserProperties.title == null ? "Select a File" : browserProperties.title;
+            ofd.InitialDirectory = browserProperties.initialDir == null ? @"C:\" : browserProperties.initialDir;
+            ofd.Filter = browserProperties.filter == null ? "All files (*.*)|*.*" : browserProperties.filter;
+            ofd.FilterIndex = browserProperties.filterIndex + 1;
+            ofd.RestoreDirectory = browserProperties.restoreDirectory;
+
+            if (ofd.ShowDialog(new WindowWrapper(GetActiveWindow())) == DialogResult.OK)
+            {
+                filepath(ofd.FileName);
+            }
+        }
 
        
     }
