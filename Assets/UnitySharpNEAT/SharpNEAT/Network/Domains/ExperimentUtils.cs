@@ -17,6 +17,7 @@
  * along with SharpNEAT.  If not, see <http://www.gnu.org/licenses/>.
  */
 using System;
+using System.Runtime.CompilerServices;
 //using System.Threading.Tasks;
 using System.Xml;
 using SharpNeat.Decoders;
@@ -43,20 +44,31 @@ namespace SharpNeat.Domains
 
             XmlElement xmlActivation = nodeList[0] as XmlElement;
             string schemeStr = XmlUtils.TryGetValueAsString(xmlActivation, "Scheme");
+            return CreateActivationScheme(schemeStr, activationElemName);
+        }
+        
+        /// <summary>
+        /// Create a network activation scheme from the scheme setting in the provided config XML.
+        /// </summary>
+        /// <returns></returns>
+        public static NetworkActivationScheme CreateActivationScheme(string schemeStr, string activationElemName)
+        {
             switch(schemeStr)
             {
                 case "Acyclic":
                     return NetworkActivationScheme.CreateAcyclicScheme();
-                case "CyclicFixedIters":
+                // TODO:: Sort this shit out
+                /*case "CyclicFixedIters":
                     int iters = XmlUtils.GetValueAsInt(xmlActivation, "Iters");
                     return NetworkActivationScheme.CreateCyclicFixedTimestepsScheme(iters);
                 case "CyclicRelax":
                     double deltaThreshold = XmlUtils.GetValueAsDouble(xmlActivation, "Threshold");
                     int maxIters = XmlUtils.GetValueAsInt(xmlActivation, "MaxIters");
-                    return NetworkActivationScheme.CreateCyclicRelaxingActivationScheme(deltaThreshold, maxIters);
+                    return NetworkActivationScheme.CreateCyclicRelaxingActivationScheme(deltaThreshold, maxIters);*/
             }
             throw new ArgumentException(string.Format("Invalid or missing ActivationScheme XML config setting [{0}]", schemeStr));
         }
+
 
         public static bool TryParse<TEnum>(string value, out TEnum result) where TEnum : struct, IConvertible
         {

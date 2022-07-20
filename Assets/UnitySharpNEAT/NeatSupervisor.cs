@@ -342,6 +342,15 @@ namespace UnitySharpNEAT
             ExperimentIO.DebugPrintSavePaths(Experiment);
         }
         
+        public void LoadExperiment(Experiment experiment)
+        {
+            _usedUnitsPool.Clear();
+
+            this.Experiment = experiment;
+            
+            ExperimentIO.DebugPrintSavePaths(Experiment);
+        }
+        
         public void SaveExperiment()
         {
             // Save the population and best network to unity data location
@@ -357,6 +366,21 @@ namespace UnitySharpNEAT
                 {
                     XmlSerializer xmlSerializer = new XmlSerializer(Experiment.GetType());
                     xmlSerializer.Serialize(xmlWriter, Experiment);
+                }
+            }
+        }
+        
+        public void SaveExperiment(Experiment experiment)
+        {
+            // Serialize the experiment to a xml file.
+            string path = FileManager.OpenFileBrowserForSave();
+            
+            using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate))
+            {
+                using (XmlWriter xmlWriter = new XmlTextWriter(fs, Encoding.Unicode))
+                {
+                    XmlSerializer xmlSerializer = new XmlSerializer(experiment.GetType());
+                    xmlSerializer.Serialize(xmlWriter, experiment);
                 }
             }
         }

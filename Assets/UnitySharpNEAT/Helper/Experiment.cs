@@ -159,6 +159,27 @@ namespace UnitySharpNEAT
             _inputCount = inputCount;
             _outputCount = outputCount;
         }
+        
+        public void Initialize(string name, int populationSize, int specieCount, NetworkActivationScheme activationScheme, string complexityRegulation, int complexityThreshold, string description, NeatSupervisor neatSupervisor, int inputCount, int outputCount)
+        {
+            _name = name;
+            _populationSize = populationSize;
+            _specieCount = specieCount;
+            _activationScheme = activationScheme;
+            _complexityRegulationStr = complexityRegulation;
+            _complexityThreshold = complexityThreshold;
+            _description = description;
+
+            _eaParams = new NeatEvolutionAlgorithmParameters();
+            _eaParams.SpecieCount = _specieCount;
+            _neatGenomeParams = new NeatGenomeParameters();
+            _neatGenomeParams.FeedforwardOnly = _activationScheme.AcyclicNetwork;
+
+            _neatSupervisor = neatSupervisor;
+
+            _inputCount = inputCount;
+            _outputCount = outputCount;
+        }
 
         public IGenomeDecoder<NeatGenome, IBlackBox> CreateGenomeDecoder()
         {
