@@ -118,6 +118,12 @@ namespace UnitySharpNEAT
             get { return _complexityThreshold; }
             set { _complexityThreshold = value; }
         }
+        
+        [XmlElement(ElementName = "Activation")]
+        public NetworkActivationScheme ActivationScheme{
+            get { return _activationScheme; }
+            set { _activationScheme = value; }
+        }
 
         public NeatEvolutionAlgorithmParameters NeatEvolutionAlgorithmParameters
         {

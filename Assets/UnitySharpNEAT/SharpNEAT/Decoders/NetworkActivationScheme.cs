@@ -16,6 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with SharpNEAT.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+using System.Xml.Serialization;
+using UnityEngine;
+
 namespace SharpNeat.Decoders
 {
     /// <summary>
@@ -23,6 +27,9 @@ namespace SharpNeat.Decoders
     /// or activation until the network becomes 'relaxed'. Relaxed here means that no node's
     /// output value changed by more than some threshold value.
     /// </summary>
+    ///
+    ///
+    [XmlType("Activation")]
     public class NetworkActivationScheme
     {
         bool _acyclicNetwork;
@@ -36,6 +43,9 @@ namespace SharpNeat.Decoders
         // Relaxing network parameters.
         double _signalDeltaThreshold;
         int _maxTimesteps;
+        
+        [SerializeField]
+        string _schemeName;
 
         // Fast flag. Strictly speaking not part of the activation scheme, but this is currently a
         // convenient place for this flag.
@@ -55,6 +65,13 @@ namespace SharpNeat.Decoders
 
         #region Properties
 
+        [XmlElement("Scheme")]
+        public string Scheme
+        {
+            get { return _schemeName;}
+            set { _schemeName = value; }
+        }
+        
         /// <summary>
         /// Gets a value indicating whether the network is acyclic or not (cyclic).
         /// </summary>
@@ -117,6 +134,7 @@ namespace SharpNeat.Decoders
         {
             NetworkActivationScheme scheme = new NetworkActivationScheme();
             scheme._acyclicNetwork = true;
+            scheme._schemeName = "Acyclic";
             return scheme;
         }
 
@@ -130,6 +148,7 @@ namespace SharpNeat.Decoders
             scheme._timestepsPerActivation = timestepsPerActivation;
             scheme._relaxingActivation = false;
             scheme._fastFlag = true;
+            scheme._schemeName = "Cyclic";
             return scheme;
         }
 
@@ -144,6 +163,7 @@ namespace SharpNeat.Decoders
             scheme._timestepsPerActivation = timestepsPerActivation;
             scheme._relaxingActivation = false;
             scheme._fastFlag = fastFlag;
+            scheme._schemeName = "Cyclic";
             return scheme;
         }
 
@@ -158,6 +178,7 @@ namespace SharpNeat.Decoders
             scheme._maxTimesteps = maxTimesteps;
             scheme._relaxingActivation = true;
             scheme._fastFlag = true;
+            scheme._schemeName = "CyclicRelaxing";
             return scheme;
         }
 
@@ -173,6 +194,7 @@ namespace SharpNeat.Decoders
             scheme._maxTimesteps = maxTimesteps;
             scheme._relaxingActivation = true;
             scheme._fastFlag = fastFlag;
+            scheme._schemeName = "CyclicRelaxing";
             return scheme;
         }
 
