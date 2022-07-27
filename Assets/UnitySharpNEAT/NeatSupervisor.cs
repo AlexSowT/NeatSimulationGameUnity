@@ -20,6 +20,7 @@ using System.Xml.Serialization;
 using AnotherFileBrowser.Windows;
 using SharpNeat.Core;
 using Src;
+using Random = UnityEngine.Random;
 
 namespace UnitySharpNEAT
 {
@@ -62,7 +63,6 @@ namespace UnitySharpNEAT
         [SerializeField, Tooltip("The parent transform which will hold the instantiated Units.")]
         private Transform _spawnParent = default;
 
-        [SerializeField, Tooltip("The colors different species members will take.")]
         private Color[] _speciesColors = default;
         
         [Header("Debug")]
@@ -146,12 +146,17 @@ namespace UnitySharpNEAT
             Utility.Log("Starting Experiment.");
             _startTime = DateTime.Now;
 
+            this.InitEvolutionAlgorithm();
+        }
+
+        private void InitEvolutionAlgorithm()
+        {
             EvolutionAlgorithm = Experiment.CreateEvolutionAlgorithm(ExperimentIO.GetSaveFilePath(Experiment.Name, ExperimentFileType.Population));
             EvolutionAlgorithm.UpdateEvent += new EventHandler(HandleUpdateEvent);
             EvolutionAlgorithm.PausedEvent += new EventHandler(HandlePauseEvent);
             EvolutionAlgorithm.StartContinue();
         }
-
+        
         /// <summary>
         /// Stops the evaluation, resets all units and saves the current generation info to a file. When StartEA() is called again, that saved generation is loaded.
         /// </summary>
@@ -251,12 +256,27 @@ namespace UnitySharpNEAT
         /// </summary>
         private UnitController InstantiateUnit(IBlackBox box)
         {
-            UnitController controller = Instantiate(_unitControllerPrefab, _unitControllerPrefab.transform.position, _unitControllerPrefab.transform.rotation);
-
-            if (_spawnParent != null)
+            UnitController controller;
+            
+            if(_spawnParent != null)
+            {
+                controller = Instantiate(_unitControllerPrefab, _spawnParent.transform.position, _spawnParent.transform.rotation);
+                /*
                 controller.transform.parent = _spawnParent;
+                */
+                controller.SpawnLocation = _spawnParent.transform.position;
+
+            }
             else
+            {
+                controller = Instantiate(_unitControllerPrefab, _unitControllerPrefab.transform.position, _unitControllerPrefab.transform.rotation);
+                /*
                 controller.transform.parent = this.transform;
+            */
+            }
+
+            controller.GetComponent<AgentController>().SetInputs(InputTypes.PositionX | InputTypes.PositionY);
+            controller.GetComponent<AgentController>().SetOutputs(OutputTypes.Rotation | OutputTypes.Speed);
 
             _blackBoxMap.Add(box, controller);
             return controller;
@@ -329,30 +349,36 @@ namespace UnitySharpNEAT
 
         public void LoadExperiment()
         {
-            _usedUnitsPool.Clear();
-            
-            Utility.DebugLog = _enableDebugLogging;
-
-            // load experiment config file and use it to create an Experiment
             XmlDocument xmlConfig = this.FileManager.OpenFileBrowserForLoad();
 
-            Experiment = new Experiment();
-            Experiment.Initialize(xmlConfig.DocumentElement, this, _networkInputCount, _networkOutputCount);
+            Experiment experiment = new Experiment();
+            experiment.Initialize(xmlConfig.DocumentElement, this, _networkInputCount, _networkOutputCount);
 
-            ExperimentIO.DebugPrintSavePaths(Experiment);
+            this.LoadExperiment(experiment);
         }
         
         public void LoadExperiment(Experiment experiment)
         {
+            this.Experiment = experiment;
+
             _usedUnitsPool.Clear();
 
-            this.Experiment = experiment;
+            // For each specieCount create a random number and add it to the SpecieColor list
+            _speciesColors = new Color[this.Experiment.SpecieCount];
+            for (int i = 0; i < Experiment.SpecieCount; i++)
+            {
+                _speciesColors[i] = (new Color(Random.Range(0.0f, 1.0f), Random.Range(0.0f, 0.2f), Random.Range(0.0f, 1.0f)));
+            }
+            
+            this.InitEvolutionAlgorithm();
             
             ExperimentIO.DebugPrintSavePaths(Experiment);
         }
         
         public void SaveExperiment()
         {
+            this.InitEvolutionAlgorithm();
+            
             // Save the population and best network to unity data location
             Experiment.SavePopulation(EvolutionAlgorithm.GenomeList);
             Experiment.SaveChampion(EvolutionAlgorithm.CurrentChampGenome);
@@ -372,17 +398,8 @@ namespace UnitySharpNEAT
         
         public void SaveExperiment(Experiment experiment)
         {
-            // Serialize the experiment to a xml file.
-            string path = FileManager.OpenFileBrowserForSave();
-            
-            using (FileStream fs = new FileStream(path, FileMode.OpenOrCreate))
-            {
-                using (XmlWriter xmlWriter = new XmlTextWriter(fs, Encoding.Unicode))
-                {
-                    XmlSerializer xmlSerializer = new XmlSerializer(experiment.GetType());
-                    xmlSerializer.Serialize(xmlWriter, experiment);
-                }
-            }
+            this.Experiment = experiment;
+            this.SaveExperiment();
         }
         
         #endregion

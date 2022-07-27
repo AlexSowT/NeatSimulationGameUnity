@@ -20,7 +20,10 @@ namespace UnitySharpNEAT
     {
         public IBlackBox BlackBox { get; private set; }
 
+        public Vector3 SpawnLocation { get; set; }
+
         private int SpeciesId { get; set; }
+        
 
         protected Color UnitColor { get; set; }
         
