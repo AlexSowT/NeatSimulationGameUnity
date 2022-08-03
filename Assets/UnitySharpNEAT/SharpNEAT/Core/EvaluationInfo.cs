@@ -43,6 +43,7 @@ namespace SharpNeat.Core
         [SerializeField] readonly int _fitnessHistoryLength;
 
         [SerializeField] double _fitness;
+        private double _fitnessAdjusted;
         [SerializeField] bool _isEvaluated;
         [SerializeField] uint _evaluationCount;
         [SerializeField] uint _evaluationPassCount;
@@ -75,6 +76,12 @@ namespace SharpNeat.Core
         public double Fitness
         {
             get { return (null != _fitnessHistory) ? _fitnessHistory.Mean : _fitness; }
+        }
+        
+        public double FitnessAdjusted
+        {
+            get { return _fitnessAdjusted; }
+            set { _fitnessAdjusted = value; }
         }
 
         /// <summary>

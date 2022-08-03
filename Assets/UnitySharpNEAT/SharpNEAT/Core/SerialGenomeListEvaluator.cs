@@ -108,6 +108,16 @@ namespace SharpNeat.Core
             return null;
         }
 
+        public IEnumerator EvaluateRtNeat(IList<TGenome> genomeList, TGenome removedGenome, TGenome newGenome)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void SwapPhenome(TGenome oldGenome, TGenome newGenome)
+        {
+            throw new System.NotImplementedException();
+        }
+
         /// <summary>
         /// Reset the internal state of the evaluation scheme if any exists.
         /// </summary>

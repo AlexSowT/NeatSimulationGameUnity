@@ -11,6 +11,7 @@ using SharpNeat.Core;
 using SharpNeat.Phenomes;
 using System.Collections.Generic;
 using System;
+using Src.Algorithms;
 
 namespace UnitySharpNEAT
 {
@@ -28,7 +29,7 @@ namespace UnitySharpNEAT
         private bool _stopConditionSatisfied;
 
         [SerializeField]
-        private NeatSupervisor _neatSupervisor;
+        private IAlgorithmController _neatSupervisor;
 
         private Dictionary<IBlackBox, FitnessInfo> _fitnessByBox = new Dictionary<IBlackBox, FitnessInfo>();
 
@@ -42,7 +43,7 @@ namespace UnitySharpNEAT
             get { return _stopConditionSatisfied; }
         }
 
-        public BlackBoxFitnessEvaluator(NeatSupervisor neatSupervisor)
+        public BlackBoxFitnessEvaluator(IAlgorithmController neatSupervisor)
         {
             this._neatSupervisor = neatSupervisor;
         }

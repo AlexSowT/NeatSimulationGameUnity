@@ -1,36 +1,24 @@
-﻿/*
-------------------------------------------------------------------
-  This file is part of UnitySharpNEAT 
-  Copyright 2020, Florian Wolf
-  https://github.com/flo-wolf/UnitySharpNEAT
-------------------------------------------------------------------
-*/
-using UnityEngine;
-using System.Collections;
-using SharpNeat.Phenomes;
+﻿using System;
 using System.Collections.Generic;
-using SharpNeat.EvolutionAlgorithms;
-using SharpNeat.Genomes.Neat;
-using System;
-using System.Xml;
 using System.IO;
-using System.Linq;
 using System.Text;
+using System.Xml;
 using System.Xml.Serialization;
-using AnotherFileBrowser.Windows;
 using SharpNeat.Core;
-using Src;
-using Src.Algorithms;
+using SharpNeat.DistanceMetrics;
+using SharpNeat.Domains;
+using SharpNeat.EvolutionAlgorithms;
+using SharpNeat.EvolutionAlgorithms.ComplexityRegulation;
+using SharpNeat.Genomes.Neat;
+using SharpNeat.Phenomes;
+using SharpNeat.SpeciationStrategies;
+using UnityEngine;
+using UnitySharpNEAT;
 using Random = UnityEngine.Random;
 
-namespace UnitySharpNEAT
+namespace Src.Algorithms.AlgorithmControllers
 {
-    /// <summary>
-    /// This class acts as the entry point for the NEAT evolution.
-    /// It manages the UnitController's being evolved and handles the creation of the NeatEvolutionAlgorithm.
-    /// It is also responsible for managing the lifecycle of the evolution, e.g. by starting/stopping it.
-    /// </summary>
-    public class NeatSupervisor : MonoBehaviour, IAlgorithmController
+    public class RTNeatController : MonoBehaviour, IAlgorithmController
     {
         #region FIELDS
         [Header("Experiment Settings")]
@@ -64,10 +52,10 @@ namespace UnitySharpNEAT
         [SerializeField, Tooltip("The parent transform which will hold the instantiated Units.")]
         private Transform _spawnParent = default;
 
-        [SerializeField]
-        private UnitPool _unitPool;
-        
         private Color[] _speciesColors = default;
+        
+        [SerializeField]
+        private UnitPool _unitPool = default;
         
         [Header("Debug")]
 
@@ -92,8 +80,9 @@ namespace UnitySharpNEAT
         public uint CurrentGeneration { get;  set; }
 
         public double CurrentBestFitness { get;  set; }
+        //public int SpeciesCount { get; set; }
 
-        public NeatEvolutionAlgorithm<NeatGenome> EvolutionAlgorithm { get; private set; }
+        public RTNeatEvolutionAlgorithm<NeatGenome> EvolutionAlgorithm { get; private set; }
 
         public int SpeciesCount
         {
@@ -109,8 +98,7 @@ namespace UnitySharpNEAT
         
         public UnitPool UnitPool
         {
-            get { return this._unitPool;}
-            
+            get { return _unitPool; }
         }
 
         public int Trials
@@ -119,13 +107,22 @@ namespace UnitySharpNEAT
             set { this._trails = value; }
         }
 
-        public float TrialDuration { get { return this._trailDuration; } set { this._trailDuration = value; } }
-        public float StoppingFitness {get { return this._stoppingFitness; } set { this._stoppingFitness = value; } }
+        public float TrialDuration
+        {
+            get { return this._trailDuration; } 
+            set { this._trailDuration = value; }
+        }
+
+        public float StoppingFitness
+        {
+            get { return this._stoppingFitness; } 
+            set { this._stoppingFitness = value; }
+        }
 
         private FileManager FileManager { get; set; }
+        
         #endregion
-
-        #region UNTIY FUNCTIONS
+        
         public void Start()
         {
             Utility.DebugLog = _enableDebugLogging;
@@ -149,18 +146,13 @@ namespace UnitySharpNEAT
 
             this.FileManager = new FileManager();
         }
-        #endregion
 
-        #region NEAT LIFECYCLE
-        /// <summary>
-        /// Starts the NEAT algorithm.
-        /// </summary>
         public void StartEvolution()
         {
             if (EvolutionAlgorithm != null && EvolutionAlgorithm.RunState == SharpNeat.Core.RunState.Running)
                 return;
 
-            UnitPool.DeactivateAllUnits();
+            DeactivateAllUnits();
 
             Utility.Log("Starting Experiment.");
             _startTime = DateTime.Now;
@@ -168,23 +160,52 @@ namespace UnitySharpNEAT
             this.InitEvolutionAlgorithm();
         }
 
+        private void DeactivateAllUnits()
+        {
+            if (EvolutionAlgorithm != null && EvolutionAlgorithm.RunState == SharpNeat.Core.RunState.Running)
+            {
+                EvolutionAlgorithm.Stop();
+            }
+        }
+
         private void InitEvolutionAlgorithm()
         {
-            EvolutionAlgorithm = Experiment.CreateEvolutionAlgorithm(ExperimentIO.GetSaveFilePath(Experiment.Name, ExperimentFileType.Population));
+            List<NeatGenome> genomeList = Experiment.LoadPopulation();
+            IGenomeFactory<NeatGenome> genomeFactory = Experiment.CreateGenomeFactory();
+            
+            IDistanceMetric distanceMetric = new ManhattanDistanceMetric(1.0, 0.0, 10.0);
+            ISpeciationStrategy<NeatGenome> speciationStrategy = new KMeansClusteringStrategy<NeatGenome>(distanceMetric);
+
+            IComplexityRegulationStrategy complexityRegulationStrategy = ExperimentUtils.CreateComplexityRegulationStrategy(Experiment._complexityRegulationStr, Experiment._complexityThreshold);
+
+            RTNeatEvolutionAlgorithm<NeatGenome> ea = new RTNeatEvolutionAlgorithm<NeatGenome>(Experiment._eaParams, speciationStrategy, complexityRegulationStrategy);
+
+            // Create black box evaluator       
+            BlackBoxFitnessEvaluator evaluator = new BlackBoxFitnessEvaluator(this);
+
+            IGenomeDecoder<NeatGenome, IBlackBox> genomeDecoder = Experiment.CreateGenomeDecoder();
+
+            IGenomeListEvaluator<NeatGenome> innerEvaluator = new CoroutinedListEvaluator<NeatGenome, IBlackBox>(genomeDecoder, evaluator, this);
+
+            IGenomeListEvaluator<NeatGenome> selectiveEvaluator = new SelectiveGenomeListEvaluator<NeatGenome>(innerEvaluator,
+                SelectiveGenomeListEvaluator<NeatGenome>.CreatePredicate_OnceOnly());
+
+            //ea.Initialize(selectiveEvaluator, genomeFactory, genomeList);
+            ea.Initialize(innerEvaluator, genomeFactory, genomeList);
+
+            EvolutionAlgorithm = ea;
             
             this.UnitPool.Init(SpeciesCount);
 
             EvolutionAlgorithm.UpdateEvent += new EventHandler(HandleUpdateEvent);
             EvolutionAlgorithm.PausedEvent += new EventHandler(HandlePauseEvent);
+            
             EvolutionAlgorithm.StartContinue();
         }
-        
-        /// <summary>
-        /// Stops the evaluation, resets all units and saves the current generation info to a file. When StartEA() is called again, that saved generation is loaded.
-        /// </summary>
+
         public void StopEvolution()
         {
-            UnitPool.DeactivateAllUnits();
+            DeactivateAllUnits();
 
             if (EvolutionAlgorithm != null && EvolutionAlgorithm.RunState == SharpNeat.Core.RunState.Running)
             {
@@ -194,14 +215,20 @@ namespace UnitySharpNEAT
 
         public void RunBest()
         {
-            throw new NotImplementedException();
+            StopEvolution();
+
+            NeatGenome genome = Experiment.LoadChampion();
+            if (genome == null)
+                return;
+
+            // Get a genome decoder that can convert genomes to phenomes.
+            IGenomeDecoder<NeatGenome, IBlackBox> genomeDecoder = Experiment.CreateGenomeDecoder();
+            // Decode the genome into a phenome (neural network, i.e. IBlackBox).
+            IBlackBox phenome = genomeDecoder.Decode(genome);
+
+            ActivateUnit(phenome, genome.SpecieIdx);
         }
 
-        #endregion
-
-        
-
-        #region EVENT HANDLER
         /// <summary>
         /// Event callback which gets called at the end of each generation.
         /// </summary>
@@ -227,9 +254,16 @@ namespace UnitySharpNEAT
             DateTime endTime = DateTime.Now;
             Utility.Log("Total time elapsed: " + (endTime - _startTime));
         }
-        #endregion
-        
-        
+
+        public void ActivateUnit(IBlackBox phenome, int genomeSpecieIdx)
+        {
+            this.UnitPool.ActivateUnit(phenome, genomeSpecieIdx);
+        }
+
+        public void DeactivateUnit(IBlackBox unit)
+        {
+            this.UnitPool.DeactivateUnit(unit);
+        }
 
         #region EXPERIMENT MANAGEMENT
 
@@ -289,17 +323,7 @@ namespace UnitySharpNEAT
         }
 
         #endregion
-        
-        public void ActivateUnit(IBlackBox phenome, int genomeSpecieIdx)
-        {
-            this.UnitPool.ActivateUnit(phenome, genomeSpecieIdx);
-        }
 
-        public void DeactivateUnit(IBlackBox unit)
-        {
-            this.UnitPool.DeactivateUnit(unit);
-        }
-        
         public float GetFitness(IBlackBox box)
         {
             return this.UnitPool.GetFitness(box);

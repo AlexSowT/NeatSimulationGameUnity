@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using SharpNeat.Genomes.Neat;
 using SharpNeat.Phenomes;
 using UnityEngine;
 using UnitySharpNEAT;
@@ -39,6 +40,11 @@ namespace Src
 
         #region UNIT MANAGEMENT
 
+        public int GetActiveCount()
+        {
+            return _usedUnitsPool.Count();
+        }
+        
         /// <summary>
         ///     Get the Fitness of a Unit equipped with a IBlackBox (Neural Net).
         ///     Called after a generation has performed, to evaluate the performance of a generation and to select the best of that
@@ -59,6 +65,7 @@ namespace Src
             var controller = GetUnusedUnit(box);
             controller.ActivateUnit(box, speciesIdx, _speciesColors[speciesIdx]);
         }
+        
 
         /// <summary>
         ///     Deactivates and resets a Unit. Called after a generation has performed.
@@ -125,8 +132,8 @@ namespace Src
             */
             }
 
-            controller.GetComponent<AgentController>().SetInputs(InputTypes.PositionX | InputTypes.PositionY);
-            controller.GetComponent<AgentController>().SetOutputs(OutputTypes.Rotation | OutputTypes.Speed);
+            controller.GetComponent<AgentController>().SetInputs(InputTypes.PositionX | InputTypes.PositionY | InputTypes.GoalPositionX | InputTypes.GoalPositionY );
+            controller.GetComponent<AgentController>().SetOutputs(OutputTypes.XVelocity | OutputTypes.YVelocity | OutputTypes.Speed);
 
             _blackBoxMap.Add(box, controller);
             return controller;

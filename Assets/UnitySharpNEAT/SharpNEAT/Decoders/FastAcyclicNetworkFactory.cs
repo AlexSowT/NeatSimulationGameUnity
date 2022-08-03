@@ -19,6 +19,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using SharpNeat.Genomes.Neat;
 using SharpNeat.Network;
 using SharpNeat.Phenomes.NeuralNets;
 
@@ -98,7 +99,7 @@ namespace SharpNeat.Decoders
             }
 
 
-        //=== Create array of FastConnection(s). 
+            //=== Create array of FastConnection(s). 
 
             // Loop the connections and lookup the node IDs for each connection's end points using newIdxById.
             IConnectionList connectionList = networkDef.ConnectionList;
@@ -163,8 +164,9 @@ namespace SharpNeat.Decoders
                 layerInfoArr[currDepth]._endConnectionIdx = connIdx;
             }
 
+            // NOTE: Casting to NeatGenome is safe here because we know that the NeatGenome constructor is only called
             return new FastAcyclicNetwork(nodeActivationFnArr, nodeAuxArgsArray, fastConnectionArray, layerInfoArr, outputNeuronIdxArr,
-                                          nodeCount, networkDef.InputNodeCount, networkDef.OutputNodeCount);
+                                          nodeCount, networkDef.InputNodeCount, networkDef.OutputNodeCount, ((NeatGenome)networkDef)._id);
         }
 
         #endregion

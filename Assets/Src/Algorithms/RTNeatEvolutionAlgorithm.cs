@@ -1,45 +1,16 @@
-/* ***************************************************************************
- * This file is part of SharpNEAT - Evolution of Neural Networks.
- * 
- * Copyright 2004-2006, 2009-2010 Colin Green (sharpneat@gmail.com)
- *
- * SharpNEAT is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * SharpNEAT is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with SharpNEAT.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using SharpNeat.Core;
-using SharpNeat.DistanceMetrics;
-using SharpNeat.EvolutionAlgorithms.ComplexityRegulation;
-using SharpNeat.SpeciationStrategies;
-using SharpNeat.Utility;
+﻿using System;
 using System.Collections;
+using System.Collections.Generic;
+using SharpNeat;
+using SharpNeat.Core;
+using SharpNeat.EvolutionAlgorithms;
+using SharpNeat.EvolutionAlgorithms.ComplexityRegulation;
+using SharpNeat.Utility;
 using UnityEngine;
 
-namespace SharpNeat.EvolutionAlgorithms
+namespace Src.Algorithms
 {
-    /// <summary>
-    /// Implementation of the NEAT evolution algorithm. 
-    /// Incorporates:
-    ///     - Speciation with fitness sharing.
-    ///     - Creating offspring via both sexual and asexual reproduction.
-    /// </summary>
-    /// <typeparam name="TGenome">The genome type that the algorithm will operate on.</typeparam>
-    /// 
-
-    public class NeatEvolutionAlgorithm<TGenome> : AbstractGenerationalAlgorithm<TGenome>
+    public class RTNeatEvolutionAlgorithm<TGenome> : AbstractGenerationalAlgorithm<TGenome>
         where TGenome : class, IGenome<TGenome>
     {
         NeatEvolutionAlgorithmParameters _eaParams;
@@ -55,43 +26,6 @@ namespace SharpNeat.EvolutionAlgorithms
 
         ComplexityRegulationMode _complexityRegulationMode;
         readonly IComplexityRegulationStrategy _complexityRegulationStrategy;
-
-        #region Constructors
-
-        /// <summary>
-        /// Constructs with the default NeatEvolutionAlgorithmParameters and speciation strategy 
-        /// (KMeansClusteringStrategy with ManhattanDistanceMetric).
-        /// </summary>
-        public NeatEvolutionAlgorithm()
-        {
-            _eaParams = new NeatEvolutionAlgorithmParameters();
-            _eaParamsComplexifying = _eaParams;
-            _eaParamsSimplifying = _eaParams.CreateSimplifyingParameters();
-            _stats = new NeatAlgorithmStats(_eaParams);
-            _speciationStrategy = new KMeansClusteringStrategy<TGenome>(new ManhattanDistanceMetric());
-
-            _complexityRegulationMode = ComplexityRegulationMode.Complexifying;
-            _complexityRegulationStrategy = new NullComplexityRegulationStrategy();
-        }
-
-        /// <summary>
-        /// Constructs with the provided NeatEvolutionAlgorithmParameters and ISpeciationStrategy.
-        /// </summary>
-        public NeatEvolutionAlgorithm(NeatEvolutionAlgorithmParameters eaParams,
-                                      ISpeciationStrategy<TGenome> speciationStrategy,
-                                      IComplexityRegulationStrategy complexityRegulationStrategy)
-        {
-            _eaParams = eaParams;
-            _eaParamsComplexifying = _eaParams;
-            _eaParamsSimplifying = _eaParams.CreateSimplifyingParameters();
-            _stats = new NeatAlgorithmStats(_eaParams);
-            _speciationStrategy = speciationStrategy;
-
-            _complexityRegulationMode = ComplexityRegulationMode.Complexifying;
-            _complexityRegulationStrategy = complexityRegulationStrategy;
-        }
-
-        #endregion
 
         #region Properties
 
@@ -130,8 +64,8 @@ namespace SharpNeat.EvolutionAlgorithms
         }
 
         #endregion
-
-        #region Public Methods [Initialization]
+        
+                #region Public Methods [Initialization]
 
         /// <summary>
         /// Initializes the evolution algorithm with the provided IGenomeListEvaluator, IGenomeFactory
@@ -184,52 +118,77 @@ namespace SharpNeat.EvolutionAlgorithms
 
         #endregion
 
-        #region Evolution Algorithm Main Method [PerformOneGeneration]
-
+        
         /// <summary>
-        /// Progress forward by one generation. Perform one generation/iteration of the evolution algorithm.
+        /// Constructs with the provided NeatEvolutionAlgorithmParameters and ISpeciationStrategy.
         /// </summary>
+        public RTNeatEvolutionAlgorithm(NeatEvolutionAlgorithmParameters eaParams,
+            ISpeciationStrategy<TGenome> speciationStrategy,
+            IComplexityRegulationStrategy complexityRegulationStrategy)
+        {
+            _eaParams = eaParams;
+            _eaParamsComplexifying = _eaParams;
+            _eaParamsSimplifying = _eaParams.CreateSimplifyingParameters();
+            _stats = new NeatAlgorithmStats(_eaParams);
+            _speciationStrategy = speciationStrategy;
+
+            _complexityRegulationMode = ComplexityRegulationMode.Complexifying;
+            _complexityRegulationStrategy = complexityRegulationStrategy;
+        }
+        
+        
+        
         protected override IEnumerator PerformOneGeneration()
         {
-            // Calculate statistics for each specie (mean fitness, target size, number of offspring to produce etc.)
-            int offspringCount;
-            SpecieStats[] specieStatsArr = CalcSpecieStats(out offspringCount);
+            // 1. Calcualte adjusted fitness of all indivuals in the population
+            // adjusted fitness = fitness / species size
 
-            // Create offspring.
-            List<TGenome> offspringList = CreateOffspring(specieStatsArr, offspringCount);
-
-            // Trim species back to their elite genomes.
-            bool emptySpeciesFlag = TrimSpeciesBackToElite(specieStatsArr);
-
-            // Rebuild _genomeList. It will now contain just the elite genomes.
-            RebuildGenomeList();
-
-            // Append offspring genomes to the elite genomes in _genomeList. We do this before calling the
-            // _genomeListEvaluator.Evaluate because some evaluation schemes r e-evaluate the elite genomes 
-            // (otherwise we could just evaluate offspringList).
-            _genomeList.AddRange(offspringList);
-
-            // wait until the Units finished performing and have been evaluated
-            // _genomeListEvaluator is created in Experiment.CreateEvolutionAlgorithm() => innerEvaluator of type UnityListEvaluator
-            yield return _genomeListEvaluator.Evaluate(_genomeList);
-
-            // Integrate offspring into species.
-            if (emptySpeciesFlag)
-            {   
-                // We have one or more terminated species. Therefore we need to fully re-speciate all genomes to divide them
-                // evenly between the required number of species.
-
-                // Clear all genomes from species (we still have the elite genomes in _genomeList).
-                ClearAllSpecies();
-
-                // Speciate genomeList.
-                _speciationStrategy.SpeciateGenomes(_genomeList, _specieList);
-            }
-            else
+            
+            double smallestAdjustedFitness = double.MaxValue;
+            int smallestIndex = -1;
+            for(int i = _genomeList.Count - 1; i >= 0; i--)
             {
-                // Integrate offspring into the existing species. 
-                _speciationStrategy.SpeciateOffspring(offspringList, _specieList);            
+                _genomeList[i].GenomeAge++;
+                    
+                _genomeList[i].EvaluationInfo.FitnessAdjusted = _genomeList[i].EvaluationInfo.Fitness / _specieList[_genomeList[i].SpecieIdx].GenomeList.Count;
+                if(_genomeList[i].EvaluationInfo.FitnessAdjusted < smallestAdjustedFitness)
+                {
+                    smallestAdjustedFitness = _genomeList[i].EvaluationInfo.FitnessAdjusted;
+                    smallestIndex = i;
+                }
             }
+
+            TGenome oldGenome = null;
+            TGenome offspring = null;
+            int offspringCount;
+            
+            // 2. Remove agent with worst adjusted fitness if age is greater than minimum age
+            if(_genomeList[smallestIndex].GenomeAge > _eaParams.MinGenomeAge)
+            {
+                oldGenome = _genomeList[smallestIndex];
+                _genomeList.RemoveAt(smallestIndex);
+                _specieList[oldGenome.SpecieIdx].GenomeList.Remove(oldGenome);
+                
+                SpecieStats[] specieStatsArr = CalcSpecieStats(out offspringCount);
+            
+                // 4 .Choose a parent species to create the new offspring based on the their average fitness.
+                // probability of choosing a given species is proportional to the average fitness of that species.
+                // a single new offspring is created by combining two offspring from this species
+
+                offspring = this.CreateOffspring(specieStatsArr);
+                _genomeList.Add(offspring);
+            }
+            
+            yield return _genomeListEvaluator.EvaluateRtNeat(_genomeList, oldGenome, offspring);
+
+            // 5. reassign all agents to the new species.
+            // this doesnt need to be done every step
+            foreach(Specie<TGenome> specie in _specieList) {
+                specie.GenomeList.Clear();
+            }
+
+            // Speciate genomeList.
+            _speciationStrategy.SpeciateGenomes(_genomeList, _specieList);
 
             // Sort the genomes in each specie. Fittest first (secondary sort - youngest first).
             SortSpecieGenomes();
@@ -237,7 +196,7 @@ namespace SharpNeat.EvolutionAlgorithms
             // Update stats and store reference to best genome.
             UpdateBestGenome();
             UpdateStats();
-
+            
             // Determine the complexity regulation mode and switch over to the appropriate set of evolution
             // algorithm parameters. Also notify the genome factory to allow it to modify how it creates genomes
             // (e.g. reduce or disable additive mutations).
@@ -254,10 +213,48 @@ namespace SharpNeat.EvolutionAlgorithms
             }
         }
 
-        #endregion
+        private TGenome CreateOffspring(SpecieStats[] specieStatsArr)
+        {
+            // Select the species that will produce the offspring.
+            double[] speciesProbabilities = new double[specieStatsArr.Length];
+            
+            for(int i = 0; i < specieStatsArr.Length; i++)
+            {
+                // TODO:: Check if this is correct
+                speciesProbabilities[i] = specieStatsArr[i]._meanFitness;
+            }
+            
+            RouletteWheelLayout rouletteWheelLayout = new RouletteWheelLayout(speciesProbabilities);
+            int specieIdx = RouletteWheel.SingleThrow(rouletteWheelLayout, _rng);
+            
+            // Create new roulette wheel layout for the chosen species' genomes.
+            List<TGenome> genomeList = _specieList[specieIdx].GenomeList;
 
-        #region Private Methods [High Level Algorithm Methods. CalcSpecieStats/CreateOffspring]
+            // Add case for when there is only one member in the species.
+            // Note: Early Return
+            if (genomeList.Count == 1)
+            {
+                return genomeList[0].CreateOffspring(_currentGeneration);
+            }
+            
+            double[] genomeProbabilities = new double[genomeList.Count];
+            for(int i = 0; i < genomeList.Count; i++)
+            {
+                genomeProbabilities[i] = genomeList[i].EvaluationInfo.Fitness;
+            }
+            
+            RouletteWheelLayout genomeRouletteWheelLayout = new RouletteWheelLayout(genomeProbabilities);
+            int genomeIdx1 = RouletteWheel.SingleThrow(genomeRouletteWheelLayout, _rng);
+            RouletteWheelLayout rwlTmp = genomeRouletteWheelLayout.RemoveOutcome(genomeIdx1);
+            int genomeIdx2 = RouletteWheel.SingleThrow(rwlTmp, _rng);
+            
+            // Create offspring.
+            TGenome offspring = _genomeList[genomeIdx1].CreateOffspring(_genomeList[genomeIdx2], _currentGeneration);
 
+            return offspring;
+        }
+
+        // TODO:: CLEAN THIS UP AS IT IS COPIED AND I COULDNT BE ASKED TO REFACTOR IT PROPERLY
         /// <summary>
         /// Calculate statistics for each specie. This method is at the heart of the evolutionary algorithm,
         /// the key things that are achieved in this method are - for each specie we calculate:
@@ -278,7 +275,15 @@ namespace SharpNeat.EvolutionAlgorithms
             {   
                 SpecieStats inst = new SpecieStats();
                 specieStatsArr[i] = inst;
-                inst._meanFitness = _specieList[i].CalcMeanFitness();
+                if (_specieList[i].GenomeList.Count == 0)
+                {
+                    inst._meanFitness = 0;
+                }
+                else
+                {
+                    inst._meanFitness = _specieList[i].CalcMeanFitness();
+                }
+
                 totalMeanFitness += inst._meanFitness;
             }
 
@@ -499,162 +504,32 @@ namespace SharpNeat.EvolutionAlgorithms
 
             return specieStatsArr;
         }
-
+        
         /// <summary>
-        /// Create the required number of offspring genomes, using specieStatsArr as the basis for selecting how
-        /// many offspring are produced from each species.
+        /// Sorts the genomes within each species fittest first, secondary sorts on age.
         /// </summary>
-        private List<TGenome> CreateOffspring(SpecieStats[] specieStatsArr, int offspringCount)
+        private void SortSpecieGenomes()
         {
-            // Build a RouletteWheelLayout for selecting species for cross-species reproduction.
-            // While we're in the loop we also pre-build a RouletteWheelLayout for each specie;
-            // Doing this before the main loop means we have RouletteWheelLayouts available for
-            // all species when performing cross-specie matings.
-            int specieCount = specieStatsArr.Length;
-            double[] specieFitnessArr = new double[specieCount];
-            RouletteWheelLayout[] rwlArr = new RouletteWheelLayout[specieCount];
+            int minSize = _specieList[0].GenomeList.Count;
+            int maxSize = minSize;
+            int specieCount = _specieList.Count;
 
-            // Count of species with non-zero selection size.
-            // If this is exactly 1 then we skip inter-species mating. One is a special case because for 0 the 
-            // species all get an even chance of selection, and for >1 we can just select normally.
-            int nonZeroSpecieCount = 0;
-            for(int i=0; i<specieCount; i++) 
+            for(int i=0; i<specieCount; i++)
             {
-                // Array of probabilities for specie selection. Note that some of these probabilites can be zero, but at least one of them won't be.
-                SpecieStats inst = specieStatsArr[i];
-                specieFitnessArr[i] = inst._selectionSizeInt;
-                if(0 != inst._selectionSizeInt) {
-                    nonZeroSpecieCount++;
-                }
-
-                // For each specie we build a RouletteWheelLayout for genome selection within 
-                // that specie. Fitter genomes have higher probability of selection.
-                List<TGenome> genomeList = _specieList[i].GenomeList;
-                double[] probabilities = new double[inst._selectionSizeInt];
-                for(int j=0; j<inst._selectionSizeInt; j++) {
-                    probabilities[j] = genomeList[j].EvaluationInfo.Fitness;
-                }
-                rwlArr[i] = new RouletteWheelLayout(probabilities);
+                // Shuffle the genomes; this ensures that genomes with equal fitness are randomly distributed amongst themselves, and therefore
+                // that the top N genomes chosen for selection and elitism isn't biased to an arbitrary set that happen to be at the front of a genome list.
+                // N.B. In github/colgreen/SharpNEAT this is done using SortUtils.SortUnstable() for improved performance.
+                Utilities.Shuffle(_specieList[i].GenomeList, _rng);
+                _specieList[i].GenomeList.Sort(GenomeFitnessComparer<TGenome>.Singleton);
+                minSize = Math.Min(minSize, _specieList[i].GenomeList.Count);
+                maxSize = Math.Max(maxSize, _specieList[i].GenomeList.Count);
             }
 
-            // Complete construction of RouletteWheelLayout for specie selection.
-            RouletteWheelLayout rwlSpecies = new RouletteWheelLayout(specieFitnessArr);
-
-            // Produce offspring from each specie in turn and store them in offspringList.
-            List<TGenome> offspringList = new List<TGenome>(offspringCount);
-            for(int specieIdx=0; specieIdx<specieCount; specieIdx++)
-            {
-                SpecieStats inst = specieStatsArr[specieIdx];
-                List<TGenome> genomeList = _specieList[specieIdx].GenomeList;
-
-                // Get RouletteWheelLayout for genome selection.
-                RouletteWheelLayout rwl = rwlArr[specieIdx];
-
-            // --- Produce the required number of offspring from asexual reproduction.
-                for(int i=0; i<inst._offspringAsexualCount; i++)
-                {
-                    int genomeIdx = RouletteWheel.SingleThrow(rwl, _rng);
-                    TGenome offspring = genomeList[genomeIdx].CreateOffspring(_currentGeneration);
-                    offspringList.Add(offspring);
-                }
-                _stats._asexualOffspringCount += (ulong)inst._offspringAsexualCount;
-
-            // --- Produce the required number of offspring from sexual reproduction.
-                // Cross-specie mating.
-                // If nonZeroSpecieCount is exactly 1 then we skip inter-species mating. One is a special case because
-                // for 0 the  species all get an even chance of selection, and for >1 we can just select species normally.
-                int crossSpecieMatings = nonZeroSpecieCount==1 ? 0 :
-                                            (int)Utilities.ProbabilisticRound(_eaParams.InterspeciesMatingProportion 
-                                                                            * inst._offspringSexualCount, _rng);
-                _stats._sexualOffspringCount += (ulong)(inst._offspringSexualCount - crossSpecieMatings);
-                _stats._interspeciesOffspringCount += (ulong)crossSpecieMatings;
-
-                // An index that keeps track of how many offspring have been produced in total.
-                int matingsCount = 0;
-                for(; matingsCount<crossSpecieMatings; matingsCount++)
-                {
-                    TGenome offspring = CreateOffspring_CrossSpecieMating(rwl, rwlArr, rwlSpecies, specieIdx, genomeList);
-                    offspringList.Add(offspring);
-                }
-
-                // For the remainder we use normal intra-specie mating.
-                // Test for special case - we only have one genome to select from in the current specie. 
-                if(1 == inst._selectionSizeInt)
-                {   
-                    // Fall-back to asexual reproduction.
-                    for(; matingsCount<inst._offspringSexualCount; matingsCount++)
-                    {
-                        int genomeIdx = RouletteWheel.SingleThrow(rwl, _rng);
-                        TGenome offspring = genomeList[genomeIdx].CreateOffspring(_currentGeneration);
-                        offspringList.Add(offspring);
-                    }
-                }
-                else
-                {   
-                    // Remainder of matings are normal within-specie.
-                    for(; matingsCount<inst._offspringSexualCount; matingsCount++)
-                    {
-                        // Select parents. SelectRouletteWheelItem() guarantees parent2Idx!=parent1Idx
-                        int parent1Idx = RouletteWheel.SingleThrow(rwl, _rng);
-                        TGenome parent1 = genomeList[parent1Idx];
-
-                        // Remove selected parent from set of possible outcomes.
-                        RouletteWheelLayout rwlTmp = rwl.RemoveOutcome(parent1Idx);
-                        if(0.0 != rwlTmp.ProbabilitiesTotal)
-                        {   // Get the two parents to mate.
-                            int parent2Idx = RouletteWheel.SingleThrow(rwlTmp, _rng);
-                            TGenome parent2 = genomeList[parent2Idx];
-                            TGenome offspring = parent1.CreateOffspring(parent2, _currentGeneration);
-                            offspringList.Add(offspring);
-                        }
-                        else
-                        {   // No other parent has a non-zero selection probability (they all have zero fitness).
-                            // Fall back to asexual reproduction of the single genome with a non-zero fitness.
-                            TGenome offspring = parent1.CreateOffspring(_currentGeneration);
-                            offspringList.Add(offspring);
-                        }
-                    }
-                }
-            }
-
-            _stats._totalOffspringCount += (ulong)offspringCount;
-            return offspringList;
+            // Update stats.
+            _stats._minSpecieSize = minSize;
+            _stats._maxSpecieSize = maxSize;
         }
-
-        /// <summary>
-        /// Cross specie mating.
-        /// </summary>
-        /// <param name="rwl">RouletteWheelLayout for selectign genomes in teh current specie.</param>
-        /// <param name="rwlArr">Array of RouletteWheelLayout objects for genome selection. One for each specie.</param>
-        /// <param name="rwlSpecies">RouletteWheelLayout for selecting species. Based on relative fitness of species.</param>
-        /// <param name="currentSpecieIdx">Current specie's index in _specieList</param>
-        /// <param name="genomeList">Current specie's genome list.</param>
-        private TGenome CreateOffspring_CrossSpecieMating(RouletteWheelLayout rwl,
-                                                          RouletteWheelLayout[] rwlArr,
-                                                          RouletteWheelLayout rwlSpecies,
-                                                          int currentSpecieIdx,
-                                                          IList<TGenome> genomeList)
-        {
-            // Select parent from current specie.
-            int parent1Idx = RouletteWheel.SingleThrow(rwl, _rng);
-
-            // Select specie other than current one for 2nd parent genome.
-            RouletteWheelLayout rwlSpeciesTmp = rwlSpecies.RemoveOutcome(currentSpecieIdx);
-            int specie2Idx = RouletteWheel.SingleThrow(rwlSpeciesTmp, _rng);
-            
-            // Select a parent genome from the second specie.
-            int parent2Idx = RouletteWheel.SingleThrow(rwlArr[specie2Idx], _rng);
-
-            // Get the two parents to mate.
-            TGenome parent1 = genomeList[parent1Idx];
-            TGenome parent2 = _specieList[specie2Idx].GenomeList[parent2Idx];
-            return parent1.CreateOffspring(parent2, _currentGeneration);
-        }
-
-        #endregion
-
-        #region Private Methods [Low Level Helper Methods]
-
+        
         /// <summary>
         /// Updates _currentBestGenome and _bestSpecieIdx, these are the fittest genome and index of the specie
         /// containing the fittest genome respectively.
@@ -687,7 +562,7 @@ namespace SharpNeat.EvolutionAlgorithms
             _currentBestGenome = bestGenome;
             _bestSpecieIdx = bestSpecieIdx;
         }
-
+        
         /// <summary>
         /// Updates the NeatAlgorithmStats object.
         /// </summary>
@@ -749,110 +624,5 @@ namespace SharpNeat.EvolutionAlgorithms
             _stats._complexityMA.Enqueue(_stats._meanComplexity);
         }
 
-        /// <summary>
-        /// Sorts the genomes within each species fittest first, secondary sorts on age.
-        /// </summary>
-        private void SortSpecieGenomes()
-        {
-            int minSize = _specieList[0].GenomeList.Count;
-            int maxSize = minSize;
-            int specieCount = _specieList.Count;
-
-            for(int i=0; i<specieCount; i++)
-            {
-                // Shuffle the genomes; this ensures that genomes with equal fitness are randomly distributed amongst themselves, and therefore
-                // that the top N genomes chosen for selection and elitism isn't biased to an arbitrary set that happen to be at the front of a genome list.
-                // N.B. In github/colgreen/SharpNEAT this is done using SortUtils.SortUnstable() for improved performance.
-                Utilities.Shuffle(_specieList[i].GenomeList, _rng);
-                _specieList[i].GenomeList.Sort(GenomeFitnessComparer<TGenome>.Singleton);
-                minSize = Math.Min(minSize, _specieList[i].GenomeList.Count);
-                maxSize = Math.Max(maxSize, _specieList[i].GenomeList.Count);
-            }
-
-            // Update stats.
-            _stats._minSpecieSize = minSize;
-            _stats._maxSpecieSize = maxSize;
-        }
-
-        /// <summary>
-        /// Clear the genome list within each specie.
-        /// </summary>
-        private void ClearAllSpecies()
-        {
-            foreach(Specie<TGenome> specie in _specieList) {
-                specie.GenomeList.Clear();
-            }
-        }
-
-        /// <summary>
-        /// Rebuild _genomeList from genomes held within the species.
-        /// </summary>
-        private void RebuildGenomeList()
-        {
-            _genomeList.Clear();
-            foreach(Specie<TGenome> specie in _specieList) {
-                _genomeList.AddRange(specie.GenomeList);
-            }
-        }
-
-        /// <summary>
-        /// Trims the genomeList in each specie back to the number of elite genomes specified in
-        /// specieStatsArr. Returns true if there are empty species following trimming.
-        /// </summary>
-        private bool TrimSpeciesBackToElite(SpecieStats[] specieStatsArr)
-        {
-            bool emptySpeciesFlag = false;
-            int count = _specieList.Count;
-            for(int i=0; i<count; i++)
-            {
-                Specie<TGenome> specie = _specieList[i];
-                SpecieStats stats = specieStatsArr[i];
-
-                int removeCount = specie.GenomeList.Count - stats._eliteSizeInt;
-                specie.GenomeList.RemoveRange(stats._eliteSizeInt, removeCount);
-
-                if(0 == stats._eliteSizeInt) {
-                    emptySpeciesFlag = true;
-                }
-            }
-            return emptySpeciesFlag;
-        }
-
-        #endregion
-
-        #region Private Methods [Debugging]
-
-        /// <summary>
-        /// Returns true if there is one or more empty species.
-        /// </summary>
-        private bool TestForEmptySpecies(IList<Specie<TGenome>> specieList)
-        {
-            foreach(Specie<TGenome> specie in specieList) {
-                if(specie.GenomeList.Count == 0) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private void DumpSpecieCounts(SpecieStats[] specieStatsArr)
-        {
-            int count = specieStatsArr.Length;
-            for(int i=0; i<count; i++) {
-                //Debug.Write("[" + _specieList[i].GenomeList.Count.ToString() + "," + specieStatsArr[i]._targetSizeInt + "] " );
-            }
-            //Debug.WriteLine(String.Empty);
-        }
-
-        private static int SumTargetSizeInt(SpecieStats[] specieStatsArr)
-        {
-            int total = 0;
-            foreach(SpecieStats inst in specieStatsArr) {
-                total += inst._targetSizeInt;
-            }
-            return total;
-        }
-
-        #endregion
     }
 }

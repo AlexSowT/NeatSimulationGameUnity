@@ -54,7 +54,7 @@ namespace SharpNeat.Genomes.Neat
         NeatGenomeFactory _genomeFactory;
 
         [SerializeField]
-        readonly uint _id;
+        public readonly uint _id;
 
         [SerializeField]
         int _specieIdx;
@@ -193,6 +193,8 @@ namespace SharpNeat.Genomes.Neat
             get { return _birthGeneration; }
         }
 
+        public uint GenomeAge { get; set; }
+
         /// <summary>
         /// Gets evaluation information for the genome, including its fitness.
         /// </summary>
@@ -254,6 +256,10 @@ namespace SharpNeat.Genomes.Neat
             set { _cachedPhenome = value; }
         }
 
+        public void IncrementAge(){
+            GenomeAge++;
+        }
+        
         /// <summary>
         /// Asexual reproduction.
         /// </summary>

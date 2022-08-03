@@ -47,6 +47,18 @@ namespace SharpNeat.Core
         /// </summary>
         IEnumerator Evaluate(IList<TGenome> genomeList);  
 
+        /// <summary> 
+        /// Evaluates a list of genomes.
+        /// </summary>
+        IEnumerator EvaluateRtNeat(IList<TGenome> genomeList, TGenome removedGenome, TGenome newGenome);
+
+        /// <summary>
+        /// Swap the phenome of the agent with the oldGenome to the new genome.
+        /// </summary>
+        /// <param name="oldGenome"></param>
+        /// <param name="newGenome"></param>
+        public void SwapPhenome(TGenome oldGenome, TGenome newGenome);
+        
         /// <summary>
         /// Reset the internal state of the evaluation scheme if any exists.
         /// </summary>

@@ -313,6 +313,8 @@ namespace SharpNeat.EvolutionAlgorithms
                 }
             }
         }
+        
+        
 
         /// <summary>
         /// Progress forward by one generation. Perform one generation/cycle of the evolution algorithm.

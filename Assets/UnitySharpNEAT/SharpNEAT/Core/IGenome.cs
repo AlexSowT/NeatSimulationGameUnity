@@ -49,6 +49,12 @@ namespace SharpNeat.Core
         /// Gets the generation that this genome was born/created in. Used to track genome age.
         /// </summary>
         uint BirthGeneration { get; }
+        
+        /// <summary>
+        /// Gets the age of the the genome. IE how many ticks have ran since the genome was created.
+        /// </summary>
+        /// TODO:: Make sure this gets reset when offspring are created.
+        uint GenomeAge { get; set; }
 
         /// <summary>
         /// Gets the evaluation information for the genome, including its fitness.

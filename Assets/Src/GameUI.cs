@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using SharpNeat.Decoders;
 using SharpNeat.Domains;
+using Src.Algorithms;
+using Src.Algorithms.AlgorithmControllers;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,6 +20,11 @@ public class GameUI : MonoBehaviour
     
     [SerializeField] 
     private NeatSupervisor _neatSupervisor;
+    
+    [SerializeField] 
+    private RTNeatController _rtNeatController;
+
+    [SerializeField] private bool useRtNeat = false;
     
     [SerializeField]
     private GameObject _newExperimentPopup;
@@ -45,6 +52,27 @@ public class GameUI : MonoBehaviour
     [SerializeField]
     private TMP_InputField complexityThresholdInput;
 
+    private IAlgorithmController AlgorithmController { get; set; }
+
+    private void Start()
+    {
+        try
+        {
+            if (useRtNeat)
+            {
+                AlgorithmController = _rtNeatController;
+            }
+            else
+            {
+                AlgorithmController = _neatSupervisor;
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.Log($"Cannot cast to IAlgorithmController, {e.Message}");;
+        }
+    }
+
     private void OnGUI()
     {
         float xPos = (Screen.width - (Screen.width * SCREENPERCENT)) - RIGHTBUFFER;
@@ -57,27 +85,27 @@ public class GameUI : MonoBehaviour
         }
         if (GUI.Button(new Rect(xPos + 20f, 80, 110, 40), "Save Experiment"))
         {
-            _neatSupervisor.SaveExperiment();
+            AlgorithmController.SaveExperiment();
         }
         if (GUI.Button(new Rect(xPos + 20f, 125, 110, 40), "Load Experiment"))
         {
-            _neatSupervisor.LoadExperiment();
+            AlgorithmController.LoadExperiment();
         }
         if (GUI.Button(new Rect(xPos + 20f, 170, 110, 40), "Start Training"))
         {
-            _neatSupervisor.StartEvolution();
+            AlgorithmController.StartEvolution();
         }
         if (GUI.Button(new Rect(xPos + 160f, 35, 110, 40), "Pause Training"))
         {
-            _neatSupervisor.StopEvolution();
+            AlgorithmController.StopEvolution();
         }
         if (GUI.Button(new Rect(xPos + 160f, 80, 110, 40), "Run Best"))
         {
-            _neatSupervisor.RunBest();
+            AlgorithmController.RunBest();
         }
         if (GUI.Button(new Rect(xPos + 160f, 125, 110, 40), "Delete Experiment"))
         {
-            ExperimentIO.DeleteAllSaveFiles(_neatSupervisor.Experiment);
+            ExperimentIO.DeleteAllSaveFiles(AlgorithmController.Experiment);
         }
         
         // Agent Options
@@ -86,7 +114,7 @@ public class GameUI : MonoBehaviour
         // Fitness Goals
         GUI.Box(new Rect(xPos, ((Screen.height/3) * 2) + TOPBUFFER, Screen.width * SCREENPERCENT, Screen.height/3 - BOTTOMBUFFER), "Fitness Goals");
 
-        GUI.Button(new Rect(10, Screen.height - 70, 110, 60), string.Format("Generation: {0}\nFitness: {1:0.00}\nSpecies Count:{2}", _neatSupervisor.CurrentGeneration, _neatSupervisor.CurrentBestFitness, _neatSupervisor.SpeciesCount));
+        GUI.Button(new Rect(10, Screen.height - 70, 110, 60), string.Format("Generation: {0}\nFitness: {1:0.00}\nSpecies Count:{2}", AlgorithmController.CurrentGeneration, AlgorithmController.CurrentBestFitness, AlgorithmController.SpeciesCount));
     }
     
     public void OnSaveClick()
@@ -95,9 +123,9 @@ public class GameUI : MonoBehaviour
         NetworkActivationScheme networkActivationScheme =
             ExperimentUtils.CreateActivationScheme(activationOptions.options[activationOptions.value].text, String.Empty);
         // TODO:: Fix input output count being hard coded at the end
-        experiment.Initialize(nameInput.text, Int32.Parse(popSizeInput.text), Int32.Parse(specieCountInput.text), networkActivationScheme, complexityStrategyInput.text, Int32.Parse(complexityThresholdInput.text), descriptionInput.text, _neatSupervisor, 2, 2);
-        _neatSupervisor.SaveExperiment(experiment);
-        _neatSupervisor.LoadExperiment(experiment);
+        experiment.Initialize(nameInput.text, Int32.Parse(popSizeInput.text), Int32.Parse(specieCountInput.text), networkActivationScheme, complexityStrategyInput.text, Int32.Parse(complexityThresholdInput.text), descriptionInput.text, AlgorithmController, 2, 2);
+        AlgorithmController.SaveExperiment(experiment);
+        AlgorithmController.LoadExperiment(experiment);
     }
 
     public void OnCancelClick()

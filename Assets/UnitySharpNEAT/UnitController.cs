@@ -22,7 +22,7 @@ namespace UnitySharpNEAT
 
         public Vector3 SpawnLocation { get; set; }
 
-        private int SpeciesId { get; set; }
+        public int SpeciesId { get; set; }
         
 
         protected Color UnitColor { get; set; }

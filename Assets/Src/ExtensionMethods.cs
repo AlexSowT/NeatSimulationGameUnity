@@ -8,6 +8,11 @@ namespace Src
         {
             return (value - fromSource) / (toSource - fromSource) * (toTarget - fromTarget) + fromTarget;
         }
+        
+        public static float Map (this float value, float fromSource, float toSource, float fromTarget, float toTarget)
+        {
+            return (value - fromSource) / (toSource - fromSource) * (toTarget - fromTarget) + fromTarget;
+        }
 
         public static float Sigmoid(double value) {
             return 1.0f / (1.0f + (float) Math.Exp(-value));

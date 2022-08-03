@@ -38,6 +38,10 @@ namespace SharpNeat.EvolutionAlgorithms
         const int DefgaultMeanSpecieChampFitnessMovingAverageHistoryLength = 100;
         const int DefaultComplexityMovingAverageHistoryLength = 100;
 
+        public int MinGenomeAge => 20;
+        
+        public int MaxGenomeAge => 50;
+
         #endregion
 
         #region Instance Fields

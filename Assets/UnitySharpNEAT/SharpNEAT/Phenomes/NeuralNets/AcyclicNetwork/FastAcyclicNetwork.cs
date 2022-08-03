@@ -16,7 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with SharpNEAT.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+using System;
 using SharpNeat.Network;
+using UnityEditor.Experimental.TerrainAPI;
 
 namespace SharpNeat.Phenomes.NeuralNets
 {
@@ -65,6 +68,8 @@ namespace SharpNeat.Phenomes.NeuralNets
         /// </summary>
         readonly LayerInfo[] _layerInfoArr;
 
+        private readonly uint _genomeID;
+        
     //=== Working data.
         /// <summary>
         /// Array of node activation signals.
@@ -81,7 +86,7 @@ namespace SharpNeat.Phenomes.NeuralNets
         readonly int _inputNodeCount;
         readonly int _outputNodeCount;
         readonly int _inputAndBiasNodeCount;
-
+        
         #region Constructor
 
         /// <summary>
@@ -105,7 +110,8 @@ namespace SharpNeat.Phenomes.NeuralNets
                                   int[] outputNodeIdxArr,
                                   int nodeCount,
                                   int inputNodeCount,
-                                  int outputNodeCount)
+                                  int outputNodeCount,
+                                  uint genomeID)
         {
             // Store refs to network structrue data.
             _nodeActivationFnArr = nodeActivationFnArr;
@@ -133,6 +139,8 @@ namespace SharpNeat.Phenomes.NeuralNets
 
             // Initialise the bias neuron's fixed output value.
             _activationArr[0] = 1.0;
+
+            this._genomeID = genomeID;
         }
 
         #endregion
@@ -215,6 +223,22 @@ namespace SharpNeat.Phenomes.NeuralNets
         public void ResetState()
         {
             // Unnecessary for this implementation. The node activation signal state is completely overwritten on each activation.
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is FastAcyclicNetwork)
+            {
+                FastAcyclicNetwork other = (FastAcyclicNetwork) obj;
+                return _genomeID == other._genomeID;
+            }
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return _genomeID.GetHashCode();
         }
 
         #endregion

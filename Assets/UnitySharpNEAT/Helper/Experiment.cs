@@ -19,6 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.Xml;
 using System.Xml.Serialization;
+using Src.Algorithms;
 using UnityEngine;
 
 
@@ -32,8 +33,7 @@ namespace UnitySharpNEAT
     public class Experiment : INeatExperiment
     {
         #region MEMBER VARIABLES
-        [SerializeField]
-        private NeatEvolutionAlgorithmParameters _eaParams;
+        [SerializeField] public NeatEvolutionAlgorithmParameters _eaParams;
 
         [SerializeField]
         private NeatGenomeParameters _neatGenomeParams;
@@ -50,17 +50,15 @@ namespace UnitySharpNEAT
         [SerializeField]
         private NetworkActivationScheme _activationScheme;
 
-        [SerializeField]
-        private string _complexityRegulationStr;
+        [SerializeField] public string _complexityRegulationStr;
 
-        [SerializeField]
-        private int? _complexityThreshold;
+        [SerializeField] public int? _complexityThreshold;
 
         [SerializeField]
         private string _description;
 
         [SerializeField]
-        private NeatSupervisor _neatSupervisor;
+        private IAlgorithmController _algorithmController;
 
         [SerializeField]
         private int _inputCount;
@@ -139,7 +137,7 @@ namespace UnitySharpNEAT
         #endregion
 
         #region FUNCTIONS
-        public void Initialize(XmlElement xmlConfig, NeatSupervisor neatSupervisor, int inputCount, int outputCount)
+        public void Initialize(XmlElement xmlConfig, IAlgorithmController algorithmController, int inputCount, int outputCount)
         {
             _name = XmlUtils.TryGetValueAsString(xmlConfig, "ExperimentName");
             _populationSize = XmlUtils.GetValueAsInt(xmlConfig, "PopulationSize");
@@ -154,13 +152,13 @@ namespace UnitySharpNEAT
             _neatGenomeParams = new NeatGenomeParameters();
             _neatGenomeParams.FeedforwardOnly = _activationScheme.AcyclicNetwork;
 
-            _neatSupervisor = neatSupervisor;
+            _algorithmController = algorithmController;
 
             _inputCount = inputCount;
             _outputCount = outputCount;
         }
         
-        public void Initialize(string name, int populationSize, int specieCount, NetworkActivationScheme activationScheme, string complexityRegulation, int complexityThreshold, string description, NeatSupervisor neatSupervisor, int inputCount, int outputCount)
+        public void Initialize(string name, int populationSize, int specieCount, NetworkActivationScheme activationScheme, string complexityRegulation, int complexityThreshold, string description, IAlgorithmController algorithmController, int inputCount, int outputCount)
         {
             _name = name;
             _populationSize = populationSize;
@@ -175,7 +173,7 @@ namespace UnitySharpNEAT
             _neatGenomeParams = new NeatGenomeParameters();
             _neatGenomeParams.FeedforwardOnly = _activationScheme.AcyclicNetwork;
 
-            _neatSupervisor = neatSupervisor;
+            _algorithmController = algorithmController;
 
             _inputCount = inputCount;
             _outputCount = outputCount;
@@ -222,11 +220,11 @@ namespace UnitySharpNEAT
             NeatEvolutionAlgorithm<NeatGenome> ea = new NeatEvolutionAlgorithm<NeatGenome>(_eaParams, speciationStrategy, complexityRegulationStrategy);
 
             // Create black box evaluator       
-            BlackBoxFitnessEvaluator evaluator = new BlackBoxFitnessEvaluator(_neatSupervisor);
+            BlackBoxFitnessEvaluator evaluator = new BlackBoxFitnessEvaluator(_algorithmController);
 
             IGenomeDecoder<NeatGenome, IBlackBox> genomeDecoder = CreateGenomeDecoder();
 
-            IGenomeListEvaluator<NeatGenome> innerEvaluator = new CoroutinedListEvaluator<NeatGenome, IBlackBox>(genomeDecoder, evaluator, _neatSupervisor);
+            IGenomeListEvaluator<NeatGenome> innerEvaluator = new CoroutinedListEvaluator<NeatGenome, IBlackBox>(genomeDecoder, evaluator, _algorithmController);
 
             IGenomeListEvaluator<NeatGenome> selectiveEvaluator = new SelectiveGenomeListEvaluator<NeatGenome>(innerEvaluator,
                 SelectiveGenomeListEvaluator<NeatGenome>.CreatePredicate_OnceOnly());
